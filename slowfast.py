@@ -41,9 +41,9 @@ CONFIG = {
     "data_root": "/n/fs/visualai-scr/Data/Kinetics_cvf/frames",  # Root directory for video frames
     "device": "cuda" if torch.cuda.is_available() else "cpu",
     "metadata_dir": "/n/fs/visualai-scr/Data/Kinetics_cvf/raw",  # Directory containing CSV files
-    "batch_size": 5, #according to paper
+    "batch_size": 1024, #according to paper
     "learning_rate": 0.01,
-    "num_epochs": 1,
+    "num_epochs": 196,
 }
 
 # Set to GPU or CPU
@@ -55,11 +55,11 @@ if torch.cuda.device_count() > 1:
     model = nn.DataParallel(model)
 
 #Initiate the Wandb
-#run = wandb.init(
-    #project="Slowfast_Kinetics"
-#)
+run = wandb.init(
+    project="Slowfast_Kinetics"
+)
 
-#wandb.watch(model, log='all', log_freq = 100)
+wandb.watch(model, log='all', log_freq = 100)
 
 json_filename = os.path.join(CONFIG["temp_folder"], "slowfast_kinetics", "kinetics_classnames.json")
 
@@ -82,9 +82,7 @@ crop_size = 256
 
 num_frames_fast = 32 #how many frames the model expects (for the fast branch)
 num_frames_slow = 8
-#sampling_rate = 2 #how fast we sample frame for the fast branch (every two frames)
 frames_per_second = 30 #original fps of the video
-#slowfast_alpha = 4
 
 transform = Compose(
         [
@@ -98,16 +96,6 @@ transform = Compose(
 )
 
 # ========== DATA PIPELINE ==========
-#Given a row in csv, get the folder to the frames
-#Example: /n/fs/visualai-scr/Data/Kinetics_cvf/frames/train/milking cow/
-
-def path_to_frames_fn(row):
-    """Map CSV row to video file path"""
-    return os.path.join(
-        CONFIG["data_root"], row['split'],row['label'],
-        f"{row['youtube_id']}_{int(row['time_start']):06d}_{int(row['time_end']):06d}"
-    )
-    
 class KineticsDataset2(torch.utils.data.Dataset):
     def __init__(self, csv_path, split, stride=2.0, max_videos=None):
         self.df = pd.read_csv(csv_path)
@@ -122,8 +110,6 @@ class KineticsDataset2(torch.utils.data.Dataset):
 
     
     # Compute indices for 8 and 32 evenly spaced frames
-    #Num frames = total number of frames, n = # of frames to sample (8 or 32)
-    #Returns a list of indices to sample from the total number of frames
     def sample_indices(self, n, num_frames):
         if num_frames < n:
             raise ValueError(f"Requested {n} frames, but only {num_frames} available.")
@@ -166,23 +152,23 @@ class KineticsDataset2(torch.utils.data.Dataset):
             "inputs": inputs, #a list of 2 tensors
             "label": kinetics_classname_to_id[label],
         }
-
-        #print("Get Item Result:", result)
         return result
     
 
-print("Started loading the dataset")
+print("Started making dataset")
 
 # Create a dataset instance for training set
 train_dataset = KineticsDataset2(
     csv_path=os.path.join(CONFIG['metadata_dir'], "train.csv"),
     split="train",
-    max_videos=5
+    max_videos=None
 )
 
-print("Loaded the dataset. Length of training dataset is ", len(train_dataset))
+print("Made dataset. Length of training dataset is ", len(train_dataset))
 
 my_train_dataloader = torch.utils.data.DataLoader(train_dataset, CONFIG['batch_size'], shuffle=True)
+
+print("Made dataloader")
 
 
 # ========== TRAINING PIPELINE ==========
@@ -191,11 +177,10 @@ def train_model():
     # Initialize components
     optimizer = optim.SGD(model.parameters(), lr=CONFIG['learning_rate'])
     loss_fn = nn.CrossEntropyLoss(reduction='mean')
-
-    count = 0
     
     # Training loop
     for epoch in range(CONFIG['num_epochs']):
+        print("Starting epoch ", epoch)
         model.train()
         train_loss = 0.0
 
@@ -205,9 +190,7 @@ def train_model():
             inputs = [torch.tensor(x).to(CONFIG['device']) for x in batch["inputs"]]
             labels = batch["label"].to(CONFIG['device'])
 
-            
-            #print("Input shape", inputs[0].shape, inputs[1].shape)
-            #print("Labels shape", labels.shape)
+            print("         Starting batch ", i, " with batch size ", batch_size)
 
             optimizer.zero_grad()
             outputs = model(inputs)
@@ -223,14 +206,14 @@ def train_model():
 
 
             #Log performance every 20 batches
-            #if i % 20 == 0:
             if True:
                 now = datetime.now()
-                count += 1
-                print("Epoch {}, Batch {}, Loss {:.4f}, Correct {}, Total {}, Time {}".format(epoch, i, loss, correct, batch_size, now.strftime("%Y-%m-%d %H:%M:%S")))
-                file_path = f"/n/fs/visualai-scr/temp_LLP/ellie/slowfast_kinetics/weights_{count:06d}.pth"
-                torch.save(model.state_dict(), file_path)
-                #run.log({"epoch": epoch, "loss": loss, "accuracy": accuracy, "correct": correct})
+                run.log({"epoch": epoch, "loss": loss, "accuracy": accuracy, "correct": correct})
+                print("Epoch {}, Batch {}, Loss {:.4f}, Correct {}, Total {}, Time {}".
+                      format(epoch, i, loss, correct, batch_size, now.strftime("%Y-%m-%d %H:%M:%S")))
+  
+        file_path = f"/n/fs/visualai-scr/temp_LLP/ellie/slowfast_kinetics/weights_{epoch:06d}.pth"
+        torch.save(model.state_dict(), file_path)
 
 if __name__ == "__main__":
     train_model()
