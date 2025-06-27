@@ -77,7 +77,8 @@ train_dataset = KineticsDataset2(
 print("Made dataset. Length of training dataset is ", len(train_dataset))
 
 #my_train_dataloader = torch.utils.data.DataLoader(train_dataset, CONFIG['batch_size'], shuffle=True)
-my_train_dataloader = torch.utils.data.DataLoader(train_dataset, CONFIG['batch_size'], shuffle=True)
+my_train_dataloader = torch.utils.data.DataLoader(train_dataset, CONFIG['batch_size'], 
+                                                  num_workers=8, pin_memory=True, shuffle=True)
 # my_validation_dataloader = torch.utils.data.DataLoader(validation_dataset, CONFIG['batch_size'], shuffle=False)
 
 print("Made dataloader")
@@ -98,7 +99,7 @@ def train_model():
         # Training phase
         for i, batch in enumerate(my_train_dataloader):
             batch_size = batch["inputs"][0].shape[0]  # Number of samples in the batch                                         
-            inputs = [torch.tensor(x) for x in batch["inputs"]]
+            inputs = [x.to(CONFIG['device']) for x in batch["inputs"]]
             labels = batch["label"].to(CONFIG['device'])
 
             #print("         Starting batch ", i, " with batch size ", batch_size)
