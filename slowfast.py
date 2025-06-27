@@ -21,18 +21,7 @@ import urllib
 import torch
 import yaml
 
-from torchvision.transforms import Compose, Lambda
-from torchvision.transforms._transforms_video import (
-    CenterCropVideo,
-    NormalizeVideo,
-)
-from pytorchvideo.data.encoded_video import EncodedVideo
-from pytorchvideo.transforms import (
-    ApplyTransformToKey,
-    ShortSideScale,
-    UniformTemporalSubsample,
-    UniformCropVideo
-) 
+from dataset import KineticsDataset2
 
 #Create an argument parser to allow for a dynamic batch size
 parser = argparse.ArgumentParser(description="Training script with tunable batch size")
@@ -65,39 +54,10 @@ run = wandb.init(
 
 wandb.watch(model, log='all', log_freq = 100)
 
-json_filename = os.path.join(CONFIG["temp_folder"], "slowfast_kinetics", "kinetics_classnames.json")
-
-with open(json_filename, "r") as f:
-    kinetics_classnames = json.load(f)
-
-# Create an id --> label name mapping
-kinetics_id_to_classname = {}
-for k, v in kinetics_classnames.items():
-    kinetics_id_to_classname[v] = str(k).replace('"', "")
-
-#Create a classname --> id mapping
-kinetics_classname_to_id = {v: k for k, v in kinetics_id_to_classname.items()}
-
-#Define input transforms
-side_size = 256
-mean = [0.45, 0.45, 0.45]
-std = [0.225, 0.225, 0.225]
-crop_size = 256
 
 num_frames_fast = 32 #how many frames the model expects (for the fast branch)
 num_frames_slow = 8
 frames_per_second = 30 #original fps of the video
-
-transform = Compose(
-        [
-            Lambda(lambda x: x/255.0), #Scale values to [0, 1]
-            NormalizeVideo(mean, std), #Normalize each channel
-            ShortSideScale( #Scale the short side of the video to be "side_size", preserve the aspect ratio
-                size=side_size
-            ),
-            CenterCropVideo(crop_size), #Take the center crop of [256x256]
-        ]
-)
 
 
 print(torch.version.cuda)  # Should print a CUDA version, not None
