@@ -1,6 +1,5 @@
 *.pth
 errfile
 outfile
-wandb/debug-internal.log
-wandb/debug.log
-wandb/latest-run
+wandb/debug-*.log
+wandb/run-*/
