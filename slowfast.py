@@ -77,7 +77,7 @@ train_dataset = KineticsDataset2(
 print("Made dataset. Length of training dataset is ", len(train_dataset))
 
 #my_train_dataloader = torch.utils.data.DataLoader(train_dataset, CONFIG['batch_size'], shuffle=True)
-my_train_dataloader = torch.utils.data.DataLoader(train_dataset, args.batch_size, shuffle=True)
+my_train_dataloader = torch.utils.data.DataLoader(train_dataset, CONFIG['batch_size'], shuffle=True)
 # my_validation_dataloader = torch.utils.data.DataLoader(validation_dataset, CONFIG['batch_size'], shuffle=False)
 
 print("Made dataloader")
