@@ -32,7 +32,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-with open(f"{args.config:04}.yaml", "r") as f:
+with open(f"config/{args.config:04}.yaml", "r") as f:
     CONFIG = yaml.safe_load(f)
 
 CONFIG['device'] = "cuda" if torch.cuda.is_available() else "cpu"
