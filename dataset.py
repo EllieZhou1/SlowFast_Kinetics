@@ -88,7 +88,7 @@ class KineticsDataset2(torch.utils.data.Dataset):
             image_path = os.path.join(frames_path, f"{i:06d}.jpg")  # Assuming frames are named as 000001.jpg, 000002.jpg, etc.
             img = Image.open(image_path).convert('RGB')  # Load as RGB
             img_tensor = torch.from_numpy(np.array(img)).permute(2, 0, 1)  # [C, H, W]
-            img_tensor = img_tensor.to(device)
+            #img_tensor = img_tensor.to(device)
             frames.append(img_tensor)
     
         video_tensor = torch.stack(frames, dim=1)  # [3, num_frames, H, W]
