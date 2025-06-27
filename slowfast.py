@@ -116,6 +116,14 @@ class KineticsDataset2(torch.utils.data.Dataset):
         print("Length of dataset after removing non-existing paths is ", len(self.df))
 
 
+        self.df['num_files'] = self.df['full_path'].apply(lambda p: sum(1 for entry in os.scandir(p) if entry.is_file()))
+        self.df = self.df[self.df['num_files'] > 0].reset_index(drop=True)
+
+        self.df.to_csv('/n/fs/visualai-scr/temp_LLP/ellie/slowfast_kinetics/clean_train.csv', index=False)
+        print("Length of dataset after removing empty directories is ", len(self.df))
+
+
+
     def __len__(self):
         if self.max_videos is None:
             return len(self.df)
@@ -124,10 +132,10 @@ class KineticsDataset2(torch.utils.data.Dataset):
 
     
     # Compute indices for 8 and 32 evenly spaced frames
-    def sample_indices(self, n, num_frames):
-        if num_frames < n:
-            raise ValueError(f"Requested {n} frames, but only {num_frames} available.")
-        return [int(round(i * (num_frames - 1) / (n - 1) + 1)) for i in range(n)]
+    def sample_indices(self, n, total_frames):
+        if total_frames < n:
+            raise ValueError(f"Requested {n} frames, but only {total_frames} available.")
+        return [int(round(i * (total_frames - 1) / (n - 1) + 1)) for i in range(n)]
     
     #Given the path to the frames directory and a list of indicies, load the video frames
     #Returns a tensor of the video frames
@@ -147,18 +155,16 @@ class KineticsDataset2(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
         label = row['label']
-        frames_path = f"/n/fs/visualai-scr/Data/Kinetics_cvf/frames/{row['split']}/{row['label']}/{row['youtube_id']}_{row['time_start']:06d}_{row['time_end']:06d}"
 
-
-        total_frames = sum(1 for entry in os.scandir(frames_path) if entry.is_file())
+        total_frames = row ['num_files']
 
         idx_fast = self.sample_indices(num_frames_fast, total_frames)
         idx_slow = self.sample_indices(num_frames_slow, total_frames)
 
         #Shape should be [3, 32, 256, 256] for the fast tensor
         #Shape should be [3, 8, 256, 256] for the slow tensor
-        fast_tensor = self.load_video_frames(frames_path, idx_fast)
-        slow_tensor = self.load_video_frames(frames_path, idx_slow)
+        fast_tensor = self.load_video_frames(row['full_path'], idx_fast)
+        slow_tensor = self.load_video_frames(row['full_path'], idx_slow)
 
         inputs=[slow_tensor, fast_tensor]
 
