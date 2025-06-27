@@ -26,7 +26,7 @@ from dataset import KineticsDataset2
 #Create an argument parser to allow for a dynamic batch size
 parser = argparse.ArgumentParser(description="Training script with tunable batch size")
 parser.add_argument(
-    "config",
+    "--config",
     type=int,
     help="configfile"
 )
@@ -53,12 +53,6 @@ run = wandb.init(
 )
 
 wandb.watch(model, log='all', log_freq = 100)
-
-
-num_frames_fast = 32 #how many frames the model expects (for the fast branch)
-num_frames_slow = 8
-frames_per_second = 30 #original fps of the video
-
 
 print(torch.version.cuda)  # Should print a CUDA version, not None
 print(torch.cuda.is_available())
