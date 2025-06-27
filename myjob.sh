@@ -13,4 +13,4 @@
 
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate ellie_env
-python slowfast.py
+python slowfast.py --config /config/0000.yaml
