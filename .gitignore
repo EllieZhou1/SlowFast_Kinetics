@@ -3,3 +3,6 @@ errfile
 outfile
 wandb/debug-*.log
 wandb/run-*/
+wandb/debug-internal.log
+wandb/debug.log
+wandb/latest-run
