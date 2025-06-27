@@ -10,13 +10,55 @@ from PIL import Image
 import torch.optim as optim
 import torch.nn as nn
 import glob
-from tqdm.auto import tqdm
 import wandb
 import argparse
 
 from typing import Dict
 import json
 import urllib
+
+from torchvision.transforms import Compose, Lambda
+from torchvision.transforms._transforms_video import (
+    CenterCropVideo,
+    NormalizeVideo,
+)
+from pytorchvideo.data.encoded_video import EncodedVideo
+from pytorchvideo.transforms import (
+    ShortSideScale,
+) 
+
+#Define input transforms
+side_size = 256
+mean = [0.45, 0.45, 0.45]
+std = [0.225, 0.225, 0.225]
+crop_size = 256
+num_frames_fast = 32
+num_frames_slow = 8
+
+transform = Compose(
+        [
+            Lambda(lambda x: x/255.0), #Scale values to [0, 1]
+            NormalizeVideo(mean, std), #Normalize each channel
+            ShortSideScale( #Scale the short side of the video to be "side_size", preserve the aspect ratio
+                size=side_size
+            ),
+            CenterCropVideo(crop_size), #Take the center crop of [256x256]
+        ]
+)
+
+
+json_filename = "/n/fs/visualai-scr/temp_LLP/ellie/slowfast_kinetics/kinetics_classnames.json"
+
+with open(json_filename, "r") as f:
+    kinetics_classnames = json.load(f)
+
+# Create an id --> label name mapping
+kinetics_id_to_classname = {}
+for k, v in kinetics_classnames.items():
+    kinetics_id_to_classname[v] = str(k).replace('"', "")
+
+#Create a classname --> id mapping
+kinetics_classname_to_id = {v: k for k, v in kinetics_id_to_classname.items()}
 
 # ========== DATA PIPELINE ==========
 class KineticsDataset2(torch.utils.data.Dataset):
