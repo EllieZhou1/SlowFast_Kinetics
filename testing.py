@@ -54,8 +54,9 @@ transform = Compose(
 )
 
 def sample_indices(n, num_frames):
-    if num_frames < n:
-        raise ValueError(f"Requested {n} frames, but only {num_frames} available.")
+    #if num_frames < n:
+        #raise ValueError(f"Requested {n} frames, but only {num_frames} available.")
+    #num_frames = min(num_frames, n)  # Ensure num_frames is at least n
     return [int(round(i * (num_frames - 1) / (n - 1) + 1)) for i in range(n)]
 
 def load_video_frames(frames_path, indices):
@@ -76,29 +77,31 @@ def load_video_frames(frames_path, indices):
 
 # transformed_tensor = transform(tensor)
 # print(transformed_tensor.shape)
+print(sample_indices(32, 12))
+
+print(len(sample_indices(32, 12)))
+
+#df = pd.read_csv("/n/fs/visualai-scr/Data/Kinetics_cvf/raw/train.csv")
 
 
+# print("Initial length of dataset is ", len(df))
+# df['full_path'] = df.apply(
+#             lambda row: os.path.join(
+#                 "/n/fs/visualai-scr/Data/Kinetics_cvf/frames/train.csv",
+#                 row['split'],
+#                 row['label'],
+#                 f"{row['youtube_id']}_{int(row['time_start']):06d}_{int(row['time_end']):06d}"
+#             ),
+#             axis=1
+#         )
+# df = df[df['full_path'].apply(os.path.exists)].reset_index(drop=True)
+# print("Length of dataset after removing non-existing paths is ", len(df))
 
-df = pd.read_csv("/n/fs/visualai-scr/Data/Kinetics_cvf/raw/train.csv")
+# df['num_files'] = df['full_path'].apply(lambda p: sum(1 for entry in os.scandir(p) if entry.is_file()))
+# df = df[df['num_files'] > 0].reset_index(drop=True)
 
-print("Initial length of dataset is ", len(df))
-df['full_path'] = df.apply(
-            lambda row: os.path.join(
-                "/n/fs/visualai-scr/Data/Kinetics_cvf/frames/train.csv",
-                row['split'],
-                row['label'],
-                f"{row['youtube_id']}_{int(row['time_start']):06d}_{int(row['time_end']):06d}"
-            ),
-            axis=1
-        )
-df = df[df['full_path'].apply(os.path.exists)].reset_index(drop=True)
-print("Length of dataset after removing non-existing paths is ", len(df))
+# df.to_csv('/n/fs/visualai-scr/temp_LLP/ellie/slowfast_kinetics/clean_train.csv', index=False)
 
-df['num_files'] = df['full_path'].apply(lambda p: sum(1 for entry in os.scandir(p) if entry.is_file()))
-df = df[df['num_files'] > 0].reset_index(drop=True)
-
-df.to_csv('/n/fs/visualai-scr/temp_LLP/ellie/slowfast_kinetics/clean_train.csv', index=False)
-
-print("Length of dataset after removing empty directories is ", len(df))
+# print("Length of dataset after removing empty directories is ", len(df))
 
 

@@ -106,8 +106,6 @@ class KineticsDataset2(torch.utils.data.Dataset):
     
     # Compute indices for 8 and 32 evenly spaced frames
     def sample_indices(self, n, total_frames):
-        if total_frames < n:
-            raise ValueError(f"Requested {n} frames, but only {total_frames} available.")
         return [int(round(i * (total_frames - 1) / (n - 1) + 1)) for i in range(n)]
     
     #Given the path to the frames directory and a list of indicies, load the video frames
