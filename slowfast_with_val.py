@@ -101,7 +101,7 @@ def train_model():
             inputs = [torch.tensor(x) for x in batch["inputs"]]
             labels = batch["label"].to(CONFIG['device'])
 
-            #print("         Starting batch ", i, " with batch size ", batch_size)
+            print("         Starting batch ", i, " with batch size ", batch_size)
 
             optimizer.zero_grad()
             outputs = model(inputs)
