@@ -32,6 +32,8 @@ from pytorchvideo.transforms import (
     UniformTemporalSubsample,
     UniformCropVideo
 ) 
+import concurrent.futures
+
 
 #Define input transforms
 side_size = 256
@@ -68,10 +70,35 @@ def load_video_frames(frames_path, indices):
     video_tensor = transform(video_tensor)  # Apply transformations
     return video_tensor
 
-tensor = load_video_frames('/n/fs/visualai-scr/Data/Kinetics_cvf/frames/train/testifying/---QUuC4vJs_000084_000094', 
-                           [1, 11, 20, 30, 40, 49, 59, 69, 78, 88, 97, 107, 117, 126, 136, 146, 155, 165, 175, 
-                            184, 194, 204, 213, 223, 232, 242, 252, 261, 271, 281, 290, 300])
+# tensor = load_video_frames('/n/fs/visualai-scr/Data/Kinetics_cvf/frames/train/testifying/---QUuC4vJs_000084_000094', 
+#                            [1, 11, 20, 30, 40, 49, 59, 69, 78, 88, 97, 107, 117, 126, 136, 146, 155, 165, 175, 
+#                             184, 194, 204, 213, 223, 232, 242, 252, 261, 271, 281, 290, 300])
 
-transformed_tensor = transform(tensor)
-print(transformed_tensor.shape)
+# transformed_tensor = transform(tensor)
+# print(transformed_tensor.shape)
+
+
+
+df = pd.read_csv("/n/fs/visualai-scr/Data/Kinetics_cvf/raw/train.csv")
+
+print("Initial length of dataset is ", len(df))
+df['full_path'] = df.apply(
+            lambda row: os.path.join(
+                "/n/fs/visualai-scr/Data/Kinetics_cvf/frames/train.csv",
+                row['split'],
+                row['label'],
+                f"{row['youtube_id']}_{int(row['time_start']):06d}_{int(row['time_end']):06d}"
+            ),
+            axis=1
+        )
+df = df[df['full_path'].apply(os.path.exists)].reset_index(drop=True)
+print("Length of dataset after removing non-existing paths is ", len(df))
+
+df['num_files'] = df['full_path'].apply(lambda p: sum(1 for entry in os.scandir(p) if entry.is_file()))
+df = df[df['num_files'] > 0].reset_index(drop=True)
+
+df.to_csv('/n/fs/visualai-scr/temp_LLP/ellie/slowfast_kinetics/clean_train.csv', index=False)
+
+print("Length of dataset after removing empty directories is ", len(df))
+
 
