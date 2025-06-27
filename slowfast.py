@@ -98,8 +98,22 @@ transform = Compose(
 # ========== DATA PIPELINE ==========
 class KineticsDataset2(torch.utils.data.Dataset):
     def __init__(self, csv_path, split, stride=2.0, max_videos=None):
-        self.df = pd.read_csv(csv_path)
         self.max_videos = max_videos
+
+        self.df = pd.read_csv(csv_path)
+
+        print("Initial length of dataset is ", len(self.df))
+        self.df['full_path'] = self.df.apply(
+            lambda row: os.path.join(
+                "/n/fs/visualai-scr/Data/Kinetics_cvf/frames/",
+                row['split'],
+                row['label'],
+                f"{row['youtube_id']}_{int(row['time_start']):06d}_{int(row['time_end']):06d}"
+            ),
+            axis=1
+        )
+        self.df = self.df[self.df['full_path'].apply(os.path.exists)].reset_index(drop=True)
+        print("Length of dataset after removing non-existing paths is ", len(self.df))
 
 
     def __len__(self):
