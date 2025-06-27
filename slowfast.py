@@ -1,6 +1,3 @@
-#this is a copy of slowfast.ipynb
-
-
 import torch
 from datetime import datetime
 import os
@@ -26,30 +23,27 @@ from torchvision.transforms._transforms_video import (
 )
 from pytorchvideo.data.encoded_video import EncodedVideo
 from pytorchvideo.transforms import (
-    
     ApplyTransformToKey,
     ShortSideScale,
     UniformTemporalSubsample,
     UniformCropVideo
 ) 
 
-# Choose the `slowfast_r50` model 
-model = torch.hub.load('facebookresearch/pytorchvideo', 'slowfast_r50', pretrained=False)
-
 CONFIG = {
     "temp_folder": "/n/fs/visualai-scr/temp_LLP/ellie",
     "data_root": "/n/fs/visualai-scr/Data/Kinetics_cvf/frames",  # Root directory for video frames
     "device": "cuda" if torch.cuda.is_available() else "cpu",
-    "metadata_dir": "/n/fs/visualai-scr/Data/Kinetics_cvf/raw",  # Directory containing CSV files
+    "metadata_dir": "/n/fs/visualai-scr/temp_LLP/ellie/slowfast_kinetics",  # Directory containing curated CSV files
     "batch_size": 1024, #according to paper
     "learning_rate": 0.01,
     "num_epochs": 196,
 }
 
-# Set to GPU or CPU
-model = model.train()
+# 1. load the model 
+model = torch.hub.load('facebookresearch/pytorchvideo', 'slowfast_r50', pretrained=False)
+# 2. Move to device
 model = model.to(CONFIG['device'])
-
+# 3. Wrap with DataParallel if multiple GPUs
 if torch.cuda.device_count() > 1:
     print(f"Using {torch.cuda.device_count()} GPUs")
     model = nn.DataParallel(model)
@@ -99,29 +93,8 @@ transform = Compose(
 class KineticsDataset2(torch.utils.data.Dataset):
     def __init__(self, csv_path, split, stride=2.0, max_videos=None):
         self.max_videos = max_videos
-
         self.df = pd.read_csv(csv_path)
-
-        print("Initial length of dataset is ", len(self.df))
-        self.df['full_path'] = self.df.apply(
-            lambda row: os.path.join(
-                "/n/fs/visualai-scr/Data/Kinetics_cvf/frames/",
-                row['split'],
-                row['label'],
-                f"{row['youtube_id']}_{int(row['time_start']):06d}_{int(row['time_end']):06d}"
-            ),
-            axis=1
-        )
-        self.df = self.df[self.df['full_path'].apply(os.path.exists)].reset_index(drop=True)
-        print("Length of dataset after removing non-existing paths is ", len(self.df))
-
-
-        self.df['num_files'] = self.df['full_path'].apply(lambda p: sum(1 for entry in os.scandir(p) if entry.is_file()))
-        self.df = self.df[self.df['num_files'] > 0].reset_index(drop=True)
-
-        self.df.to_csv('/n/fs/visualai-scr/temp_LLP/ellie/slowfast_kinetics/clean_train.csv', index=False)
-        print("Length of dataset after removing empty directories is ", len(self.df))
-
+        #TODO: reduce df to the max_videos if specified
 
 
     def __len__(self):
@@ -145,6 +118,7 @@ class KineticsDataset2(torch.utils.data.Dataset):
             image_path = os.path.join(frames_path, f"{i:06d}.jpg")  # Assuming frames are named as 000001.jpg, 000002.jpg, etc.
             img = Image.open(image_path).convert('RGB')  # Load as RGB
             img_tensor = torch.from_numpy(np.array(img)).permute(2, 0, 1)  # [C, H, W]
+            img_tensor = img_tensor.to(CONFIG['device'])
             frames.append(img_tensor)
     
         video_tensor = torch.stack(frames, dim=1)  # [3, num_frames, H, W]
@@ -175,11 +149,15 @@ class KineticsDataset2(torch.utils.data.Dataset):
         return result
     
 
+print(torch.version.cuda)  # Should print a CUDA version, not None
+print(torch.cuda.is_available())
+print(torch.cuda.device_count())
+print("Using device:", CONFIG['device'])
 print("Started making dataset")
 
 # Create a dataset instance for training set
 train_dataset = KineticsDataset2(
-    csv_path=os.path.join(CONFIG['metadata_dir'], "train.csv"),
+    csv_path=os.path.join(CONFIG['metadata_dir'], "clean_train.csv"),
     split="train",
     max_videos=None
 )
@@ -192,7 +170,6 @@ print("Made dataloader")
 
 
 # ========== TRAINING PIPELINE ==========
-
 def train_model():
     # Initialize components
     optimizer = optim.SGD(model.parameters(), lr=CONFIG['learning_rate'])
@@ -207,7 +184,7 @@ def train_model():
         # Training phase
         for i, batch in enumerate(my_train_dataloader):
             batch_size = batch["inputs"][0].shape[0]  # Number of samples in the batch                                         
-            inputs = [torch.tensor(x).to(CONFIG['device']) for x in batch["inputs"]]
+            inputs = [torch.tensor(x) for x in batch["inputs"]]
             labels = batch["label"].to(CONFIG['device'])
 
             print("         Starting batch ", i, " with batch size ", batch_size)
