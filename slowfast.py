@@ -212,7 +212,7 @@ def train_model():
     print(f"Training with {batches_needed} batches per epoch")
 
     #for epoch in range(CONFIG['num_epochs']):
-    for epoch in range(CONFIG['last epoch saved'] + 1, CONFIG['num_epochs'] + 1):
+    for epoch in range(CONFIG['last epoch saved'] + 1, CONFIG['last epoch saved'] + 1 + CONFIG['num_epochs']):
         print("Starting epoch ", epoch)
 
         my_model.train()
