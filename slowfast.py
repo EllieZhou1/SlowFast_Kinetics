@@ -27,13 +27,16 @@ from dataset import KineticsDataset2
 parser = argparse.ArgumentParser(description="Training script with tunable batch size")
 parser.add_argument(
     "--config",
-    type=int,
+    type=str,
     help="configfile"
 )
 args = parser.parse_args()
 
-with open(f"config/{args.config:04}.yaml", "r") as f:
+with open(f"config/{args.config}", "r") as f:
     CONFIG = yaml.safe_load(f)
+
+print("Using config file: ", f"config/{args.config}")
+print("Config loaded: ", CONFIG)
 
 CONFIG['device'] = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -45,6 +48,12 @@ my_model = my_model.to(CONFIG['device'])
 if torch.cuda.device_count() > 1:
     print(f"Using {torch.cuda.device_count()} GPUs")
     my_model = nn.DataParallel(my_model)
+
+
+#TODO: Change the "last epoch" to the last epoch you want to load
+weights_path = os.path.join(CONFIG['metadata_dir'], "saved_weights", CONFIG['weights_dir'], f"weights_{CONFIG['last epoch saved']:06d}.pth")
+my_model.load_state_dict(torch.load(weights_path, map_location=CONFIG['device']))
+
 
 #Initiate the Wandb
 run = wandb.init(
@@ -77,14 +86,14 @@ print("Started making dataset")
 
 # Create a dataset instance for training set
 train_dataset = KineticsDataset2(
-    csv_path=os.path.join(CONFIG['metadata_dir'], "clean_train.csv"),
+    csv_path=os.path.join(CONFIG['metadata_dir'], CONFIG['train_csv']),
     split="train",
     max_videos=None
 )
 
 #create a dataset instance for validation set
 validation_dataset = KineticsDataset2(
-     csv_path = os.path.join(CONFIG['metadata_dir'], "clean_validate.csv"),
+     csv_path = os.path.join(CONFIG['metadata_dir'], CONFIG['val_csv']),
      split="validate",
      max_videos=None
 )
@@ -98,10 +107,10 @@ print("Made dataset. Length of validation dataset is ", validation_len)
 
 #my_train_dataloader = torch.utils.data.DataLoader(train_dataset, CONFIG['batch_size'], shuffle=True)
 my_train_dataloader = torch.utils.data.DataLoader(train_dataset, CONFIG['batch_size'], 
-                                                  num_workers=8, pin_memory=True, shuffle=True)
+                                                  num_workers=CONFIG['num_dataloader_workers'], pin_memory=True, shuffle=True)
 
 my_validation_dataloader = torch.utils.data.DataLoader(validation_dataset, CONFIG['batch_size'], 
-                                                       num_workers=8, pin_memory=True, shuffle=False)
+                                                       num_workers=CONFIG['num_dataloader_workers'], pin_memory=True, shuffle=False)
 
 print("Made dataloaders")
 
@@ -119,7 +128,7 @@ def train_epoch(model, epoch, optimizer, loss_fn, dataloader):
             inputs = [x.to(CONFIG['device']) for x in batch["inputs"]]
             labels = batch["label"].to(CONFIG['device'])
 
-            #print("         Starting batch ", i, " with batch size ", batch_size)
+            print("         Starting batch ", i, " with batch size ", batch_size)
 
             optimizer.zero_grad()
             outputs = model(inputs)
@@ -135,7 +144,8 @@ def train_epoch(model, epoch, optimizer, loss_fn, dataloader):
             accuracy = float(correct)/total
 
             #Log performance every 50 batch
-            if i % 20 == 0:
+            #if i % 20 == 0:
+            if True:
                 now = datetime.now()
                 run.log({
                      "train loss": loss, 
@@ -177,7 +187,8 @@ def test_epoch(model, epoch, loss_fn, dataloader):
             accuracy = float(correct)/total
 
             #Log performance every 50 batch
-            if i % 20 == 0:
+            #if i % 20 == 0:
+            if True:
                 now = datetime.now()
                 run.log({
                      "test loss": loss, 
@@ -200,7 +211,8 @@ def train_model():
     batches_needed = train_len // CONFIG['batch_size']
     print(f"Training with {batches_needed} batches per epoch")
 
-    for epoch in range(CONFIG['num_epochs']):
+    #for epoch in range(CONFIG['num_epochs']):
+    for epoch in range(CONFIG['last epoch saved'] + 1, CONFIG['num_epochs'] + 1):
         print("Starting epoch ", epoch)
 
         my_model.train()
@@ -211,7 +223,7 @@ def train_model():
         my_model.eval()
         test_epoch(my_model, epoch, my_loss_fn, my_validation_dataloader)
         
-        file_path = f"/n/fs/visualai-scr/temp_LLP/ellie/slowfast_kinetics/saved_weights/slowfast_kinetics400/weights_{epoch:06d}.pth"
+        file_path = os.path.join(CONFIG['metadata_dir'], "saved_weights", CONFIG['weights_dir'], f"weights_{epoch:06d}.pth")
         torch.save(my_model.state_dict(), file_path)
             
 
