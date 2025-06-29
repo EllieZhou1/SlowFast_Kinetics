@@ -97,8 +97,8 @@ class KineticsDataset2(torch.utils.data.Dataset):
             
 
     def __getitem__(self, idx):
-        if(idx % 10 == 0):
-            print("Get item ", idx)
+        #if(idx % 10 == 0):
+        print("Get item ", idx)
 
         row = self.df.iloc[idx]
         label = row['label']
