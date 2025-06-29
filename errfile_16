@@ -4,12 +4,11 @@
   warnings.warn(
 Using cache found in /u/ez9517/.cache/torch/hub/facebookresearch_pytorchvideo_main
 wandb: Currently logged in as: ellie-m-zhou (ellie-m-zhou-princeton-university) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: creating run
 wandb: Tracking run with wandb version 0.20.1
-wandb: Run data is saved locally in /n/fs/visualai-scr/temp_LLP/ellie/slowfast_kinetics/wandb/run-20250627_102504-dykoagd9
+wandb: Run data is saved locally in /n/fs/visualai-scr/temp_LLP/ellie/slowfast_kinetics/wandb/run-20250627_105850-iws1res7
 wandb: Run `wandb offline` to turn off syncing.
-wandb: Syncing run legendary-sponge-19
+wandb: Syncing run desert-frost-23
 wandb: ⭐️ View project at https://wandb.ai/ellie-m-zhou-princeton-university/SlowFast_Kinetics
-wandb: 🚀 View run at https://wandb.ai/ellie-m-zhou-princeton-university/SlowFast_Kinetics/runs/dykoagd9
-/n/fs/visualai-scr/temp_LLP/ellie/slowfast_kinetics/slowfast.py:101: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
-  inputs = [torch.tensor(x) for x in batch["inputs"]]
-slurmstepd: error: *** JOB 2206048 ON neu328 CANCELLED AT 2025-06-27T10:28:09 ***
+wandb: 🚀 View run at https://wandb.ai/ellie-m-zhou-princeton-university/SlowFast_Kinetics/runs/iws1res7
+slurmstepd: error: *** JOB 2206065 ON neu301 CANCELLED AT 2025-06-27T19:59:30 ***
